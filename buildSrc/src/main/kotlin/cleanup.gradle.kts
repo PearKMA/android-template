@@ -77,14 +77,14 @@ fun changePackageName(owner: String, name: String) {
         it.walk().filter {
             it.isFile && (it.extension == "kt" || it.extension == "kts" || it.extension == "xml")
         }.forEach {
-            it.replace("com.testarossa.template", "com.github.$owner.$name")
+            it.replace("com.testarossa.template", "com.$owner.$name")
         }
     }
     srcDirectories().forEach {
         it.listFiles()!!.filter { it.isDirectory } // down to src/main
             .flatMap { it.listFiles()!!.filter { it.isDirectory } } // down to src/main/java
             .forEach {
-                val newDir = File(it, "com/github/$owner/$name")
+                val newDir = File(it, "com/$owner/$name")
                 newDir.parentFile.mkdirs()
                 File(it, "com/testarossa/template").renameTo(newDir)
                 File(it, "com/testarossa").deleteRecursively()

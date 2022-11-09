@@ -53,7 +53,8 @@ android {
     }
 
     lint {
-//        warningsAsErrors = true
+        disable += "UnusedResources"
+        warningsAsErrors = true
         abortOnError = true
     }
     // Use this block to configure different flavors

@@ -38,7 +38,8 @@ android {
     }
 
     lint {
-//        warningsAsErrors = true
+        disable += "UnusedResources"
+        warningsAsErrors = true
         abortOnError = true
     }
 }

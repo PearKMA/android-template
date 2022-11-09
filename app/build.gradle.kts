@@ -53,7 +53,7 @@ android {
     }
 
     lint {
-        warningsAsErrors = true
+//        warningsAsErrors = true
         abortOnError = true
     }
     // Use this block to configure different flavors

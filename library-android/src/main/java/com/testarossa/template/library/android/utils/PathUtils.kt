@@ -40,7 +40,7 @@ fun getPrimaryStorageVolumeForAndroid11AndAbove(context: Context): String {
     return mySV.directory?.path ?: ""
 }
 
-//@RequiresApi(Build.VERSION_CODES.N)
+@RequiresApi(Build.VERSION_CODES.N)
 fun getPrimaryStorageVolumeAndroid10(context: Context): String {
     var volumeRootPath = ""
     val myStorageManager =

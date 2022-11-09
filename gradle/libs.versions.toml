@@ -6,7 +6,7 @@ safeargs = "2.5.2"
 hilt_gradle = "2.43.2"
 # configs
 compile_sdk_version = "33"
-min_sdk_version = "24"
+min_sdk_version = "23"
 target_sdk_version = "33"
 
 # dependencies

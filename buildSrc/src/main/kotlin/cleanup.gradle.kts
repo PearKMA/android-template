@@ -33,7 +33,7 @@ tasks.register("templateCleanup") {
         // cleanup the cleanup :)
         file(".github/template-cleanup").deleteRecursively()
         file(".github/workflows/cleanup.yaml").delete()
-        file("build.gradle.kts.kts").replace(
+        file("build.gradle.kts").replace(
             "    cleanup\n",
             ""
         )

@@ -78,6 +78,9 @@ fun changePackageName(owner: String, name: String) {
             it.isFile && (it.extension == "kt" || it.extension == "kts" || it.extension == "xml")
         }.forEach {
             it.replace("com.testarossa.template", "com.$owner.$name")
+            if(it.extension == "kts"){
+                it.readText().replace("com.testarossa.template", "com.$owner.$name")
+            }
         }
     }
     srcDirectories().forEach {

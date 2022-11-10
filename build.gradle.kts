@@ -5,6 +5,10 @@ plugins {
     id("com.android.library") apply false
     kotlin("android") apply false
     alias(libs.plugins.versions)
+//    alias(libs.plugins.safeargs) apply false
+    alias(libs.plugins.hilt).apply(false)
+//    alias(libs.plugins.google.services) apply false
+//    alias(libs.plugins.crashlytics) apply false
     cleanup
     base
 }

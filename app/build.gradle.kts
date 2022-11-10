@@ -1,6 +1,10 @@
 plugins {
     id("com.android.application")
     kotlin("android")
+    id("com.google.dagger.hilt.android")
+//    id("androidx.navigation.safeargs.kotlin")
+//    id("com.google.gms.google-services")
+//    id("com.google.firebase.crashlytics")
     kotlin("kapt")
 }
 
@@ -31,6 +35,7 @@ android {
         }
     }
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
@@ -44,7 +49,7 @@ android {
         dataBinding = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.3.2"
+        kotlinCompilerExtensionVersion = libs.versions.compose.compilerextension.get()
     }
     packagingOptions {
         resources {
@@ -74,6 +79,9 @@ android {
 dependencies {
     implementation(projects.libraryAndroid)
     implementation(projects.libraryCompose)
+    coreLibraryDesugaring(libs.desugar)
+    kapt(libs.hilt.compiler)
+    kapt(libs.metadata.jvm)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.androidx.core.ktx)
@@ -83,6 +91,20 @@ dependencies {
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling)
     implementation(libs.material3)
+    implementation(libs.timber)
+    implementation(libs.androidx.constraint.layout)
+    implementation(libs.compose.viewmodel)
+    implementation(libs.compose.navigation)
+    implementation(libs.compose.hilt.navigation)
+    implementation(libs.landscapist.glide)
+    implementation(libs.datastore)
+    implementation(libs.hilt)
+    api(libs.cameraview)
+    implementation(libs.accompanist.systemuicontroller)
+    implementation(libs.accompanist.navigation.animation)
+    implementation(libs.accompanist.permissions)
+
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.compose.ui.test.junit4)
     androidTestImplementation(libs.espresso.core)

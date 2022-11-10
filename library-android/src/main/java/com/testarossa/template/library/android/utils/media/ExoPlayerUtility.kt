@@ -3,6 +3,10 @@ package com.testarossa.template.library.android.utils.media
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.FloatRange
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import com.google.android.exoplayer2.C
 import com.google.android.exoplayer2.ExoPlayer
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.PlaybackException
@@ -21,51 +25,52 @@ import com.google.android.exoplayer2.util.Util
 
 private lateinit var exoUtility: ExoPlayerUtility
 exoUtility =
-            ExoPlayerHelper(context = requireContext(), delay = 200L, playerView = null).apply {
-                listener = object : ExoPlayerHelper.IExoPlayerCallback {
-                    override fun getDurationMedia(duration: Long) {
-                    }
+ExoPlayerHelper(context = requireContext(), delay = 200L, playerView = null, runInBackground = false).apply {
+listener = object : ExoPlayerHelper.IExoPlayerCallback {
+override fun getDurationMedia(duration: Long) {
+}
 
-                    override fun onPlaybackPositionChanged(position: Long) {
-                        viewModel.onPlaybackPositionChange(position)
-                    }
+override fun onPlaybackPositionChanged(position: Long) {
+viewModel.onPlaybackPositionChange(position)
+}
 
-                    override fun onPlaybackStateChanged(playbackState: Int) {
+override fun onPlaybackStateChanged(playbackState: Int) {
 
-                    }
+}
 
-                    override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        viewModel.onPlayingChange(isPlaying)
-                    }
+override fun onIsPlayingChanged(isPlaying: Boolean) {
+viewModel.onPlayingChange(isPlaying)
+}
 
-                    override fun onPlayerError(error: com.google.android.exoplayer2.PlaybackException) {
+override fun onPlayerError(error: com.google.android.exoplayer2.PlaybackException) {
 
-                    }
+}
 
-                }
-            }
+}
+}
+viewLifecycleOwner.lifecycle.addObserver(exoUtility)
 # set media:
 exoUtility.setMedia(MediaItem.fromUri(Uri.parse(event.path)))
 # change state playing:
 exoUtility.changeStatePlayer(event.playing)
 
-# Pause & Resume when in background: exoUtility.onPause()....
-# Play when in background: exoUtility.onCreate() && exoUtility.onDestroy()
  */
 
-open class ExoPlayerUtility(
+class ExoPlayerUtility(
     private val playerView: StyledPlayerView?,
     private val context: Context,
+    private val runInBackground: Boolean = false,
     delay: Long = 1000
-) {
-    // region Const and Fields
+) : DefaultLifecycleObserver {
 
+    // region Const and Fields
     interface IExoPlayerCallback {
-        fun getDurationMedia(duration: Long)
-        fun onPlaybackPositionChanged(position: Long)
-        fun onPlaybackStateChanged(playbackState: Int)
-        fun onIsPlayingChanged(isPlaying: Boolean)
-        fun onPlayerError(error: PlaybackException)
+        fun getDurationMedia(duration: Long) {}
+        fun onPlaybackPositionChanged(position: Long) {}
+        fun onLoadComplete() {}
+        fun onEndPlaying() {}
+        fun onIsPlayingChanged(isPlaying: Boolean) {}
+        fun onPlayerError(error: PlaybackException) {}
     }
 
     private val playbackStateListener: Player.Listener = playbackStateListener()
@@ -97,18 +102,23 @@ open class ExoPlayerUtility(
     // endregion
 
     // region controller
-    open fun getPlayer() = player
+    fun getPlayer() = player
 
-    open fun setSpeed(speed: Float) {
+    fun setSpeed(@FloatRange(from = 0.0, fromInclusive = false) speed: Float) {
         player?.setPlaybackSpeed(speed)
     }
 
-    open fun enableRepeat(enable: Boolean) {
+    fun enableRepeat(enable: Boolean) {
         enableRepeat = enable
         player?.repeatMode = if (!enable) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ALL
     }
 
-    open fun setMedia(media: MediaItem, simpleCache: SimpleCache? = null) {
+    fun toggleRepeat() {
+        enableRepeat = !enableRepeat
+        player?.repeatMode = if (!enableRepeat) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ALL
+    }
+
+    fun setMedia(media: MediaItem, simpleCache: SimpleCache? = null) {
         mediaItem = media
         player?.let {
             if (simpleCache != null) {
@@ -129,7 +139,7 @@ open class ExoPlayerUtility(
         }
     }
 
-    open fun changeStatePlayer(playing: Boolean) {
+    fun changeStatePlayer(playing: Boolean) {
         if (playing) {
             audioHelper.tryPlayback()
         } else {
@@ -140,7 +150,7 @@ open class ExoPlayerUtility(
     /**
      * Play/Pause media
      */
-    open fun onPlayPauseMedia() {
+    fun onPlayPauseMedia() {
         player?.let {
             if (it.playbackState == ExoPlayer.STATE_ENDED) {
                 playbackPosition = 0L
@@ -157,61 +167,56 @@ open class ExoPlayerUtility(
     /**
      * Seek media to miliseconds
      */
-    open fun seekTo(time: Long) {
+    fun seekTo(time: Long) {
         playbackPosition = time
         player?.seekTo(playbackPosition)
     }
 
-    open fun changeVolume(volume: Float) {
+    fun changeVolume(volume: Float) {
         this.volume = volume
         player?.volume = volume
-    }
-
-    open fun onRestoreStatePlayWhenReady() {
-        player?.playWhenReady = playWhenReady
-    }
-
-    open fun onSavedStatePlayWhenReady() {
-        playWhenReady = player?.playWhenReady ?: playWhenReady
-        player?.playWhenReady = false
     }
     // endregion
 
     // region lifecycle methods
-    open fun onStart() {
-        if (Util.SDK_INT > 23) {
+    override fun onResume(owner: LifecycleOwner) {
+        if ((Util.SDK_INT <= 23 || player == null) && !runInBackground) {
             initializePlayer()
             playerView?.onResume()
         }
     }
 
-    open fun onResume() {
-        if ((Util.SDK_INT <= 23 || player == null)) {
+    override fun onStart(owner: LifecycleOwner) {
+        if (Util.SDK_INT > 23 && !runInBackground) {
             initializePlayer()
             playerView?.onResume()
         }
     }
 
-    open fun onPause() {
-        if (Util.SDK_INT <= 23) {
+    override fun onPause(owner: LifecycleOwner) {
+        if (Util.SDK_INT <= 23 && !runInBackground) {
             playerView?.onPause()
             releasePlayer()
         }
     }
 
-    open fun onStop() {
-        if (Util.SDK_INT > 23) {
+    override fun onStop(owner: LifecycleOwner) {
+        if (Util.SDK_INT > 23 && !runInBackground) {
             playerView?.onPause()
             releasePlayer()
         }
     }
 
-    open fun onCreate() {
-        initializePlayer()
+    override fun onCreate(owner: LifecycleOwner) {
+        if (runInBackground) {
+            initializePlayer()
+        }
     }
 
-    open fun onDestroy() {
-        releasePlayer()
+    override fun onDestroy(owner: LifecycleOwner) {
+        if (runInBackground) {
+            releasePlayer()
+        }
     }
     // endregion
 
@@ -222,6 +227,7 @@ open class ExoPlayerUtility(
             .also { exoPlayer ->
                 playerView?.player = exoPlayer
                 exoPlayer.addListener(playbackStateListener)
+                exoPlayer.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
                 exoPlayer.playWhenReady = playWhenReady
                 exoPlayer.repeatMode =
                     if (!enableRepeat) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ALL
@@ -267,8 +273,10 @@ open class ExoPlayerUtility(
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState == ExoPlayer.STATE_READY) {
                 listener?.getDurationMedia(player?.duration ?: 0L)
+                listener?.onLoadComplete()
+            } else if (playbackState == ExoPlayer.STATE_ENDED) {
+                listener?.onEndPlaying()
             }
-            listener?.onPlaybackStateChanged(playbackState)
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -282,7 +290,11 @@ open class ExoPlayerUtility(
 
     private fun audioFocusListener() = object : AudioFocusUtility.MediaControlListener {
         override fun onPlayMedia() {
-            player?.playWhenReady = true
+            if (player == null) {
+                initializePlayer()
+            } else {
+                player?.playWhenReady = true
+            }
         }
 
         override fun onPauseMedia() {
@@ -290,7 +302,7 @@ open class ExoPlayerUtility(
         }
 
         override fun onStopMedia() {
-            player?.playWhenReady = false
+            releasePlayer()
         }
     }
     // endregion

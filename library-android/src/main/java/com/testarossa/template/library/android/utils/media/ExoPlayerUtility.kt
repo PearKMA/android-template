@@ -16,24 +16,41 @@ import com.google.android.exoplayer2.upstream.cache.SimpleCache
 import com.google.android.exoplayer2.util.Util
 
 /**
- *
- * How to use:
- *
- * init constructor
- * implement interface IExoPlayerCallback
- * -> onAudioLoss:  onloss -> pauseVideo() + set image pause
- *                  else -> resumeVideo() + set image play if resumeVideo() == true else pause
- * -> onCurrentTime: (text current time).text = time + (seekbar time).progress = progress
- *
- * (seekbar time).max = this.duration!!.toInt()
- * (text duration).text = formatTime(this.duration!!)
- *
- * button play/pause: if(playPauseVideo()){ set image play} else { set image pause}
- * seek: seekTo(time)
- * onResume:    startHandler() + check resumeVideo()
- * onPause:     stopHandler() + pauseVideo() + set image pause
- * onstart:     initializePlayer(url)
- * onstop:      killPlayer()
+
+# How to use:
+
+private lateinit var exoUtility: ExoPlayerUtility
+exoUtility =
+            ExoPlayerHelper(context = requireContext(), delay = 200L, playerView = null).apply {
+                listener = object : ExoPlayerHelper.IExoPlayerCallback {
+                    override fun getDurationMedia(duration: Long) {
+                    }
+
+                    override fun onPlaybackPositionChanged(position: Long) {
+                        viewModel.onPlaybackPositionChange(position)
+                    }
+
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+
+                    }
+
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        viewModel.onPlayingChange(isPlaying)
+                    }
+
+                    override fun onPlayerError(error: com.google.android.exoplayer2.PlaybackException) {
+
+                    }
+
+                }
+            }
+# set media:
+exoUtility.setMedia(MediaItem.fromUri(Uri.parse(event.path)))
+# change state playing:
+exoUtility.changeStatePlayer(event.playing)
+
+# Pause & Resume when in background: exoUtility.onPause()....
+# Play when in background: exoUtility.onCreate() && exoUtility.onDestroy()
  */
 
 open class ExoPlayerUtility(

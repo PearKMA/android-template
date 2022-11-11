@@ -81,7 +81,6 @@ dependencies {
     implementation(projects.libraryCompose)
     coreLibraryDesugaring(libs.desugar)
     kapt(libs.hilt.compiler)
-    kapt(libs.metadata.jvm)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.androidx.core.ktx)

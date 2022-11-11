@@ -11,25 +11,25 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 
-open class BaseDataStoreManager(
-    private val context: Context,
+abstract class BaseDataStoreManager(
+    context: Context,
     nameDataStore: String = "user_preferences"
 ) {
     private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(nameDataStore)
     private val mContext = context
 
     // region helper function
-    protected suspend fun <T> Preferences.Key<T>.setValue(value: T) {
+    suspend fun <T> Preferences.Key<T>.setValue(value: T) {
         mContext.dataStore.edit { preferences -> preferences[this] = value }
     }
 
-    protected fun <T> Preferences.Key<T>.watchValue(defaultValue: T): Flow<T> {
+    fun <T> Preferences.Key<T>.watchValue(defaultValue: T): Flow<T> {
         return mContext.dataStore.data
             .catchAndHandleError()
             .map { preferences -> preferences[this] ?: defaultValue }
     }
 
-    protected fun <T> Preferences.Key<T>.watchValue(): Flow<T?> {
+    fun <T> Preferences.Key<T>.watchValue(): Flow<T?> {
         return mContext.dataStore.data
             .catchAndHandleError()
             .map { preferences -> preferences[this] }

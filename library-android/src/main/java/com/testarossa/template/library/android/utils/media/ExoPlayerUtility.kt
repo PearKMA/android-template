@@ -90,7 +90,7 @@ class ExoPlayerUtility(
     private var mediaSource: BaseMediaSource? = null
     private var player: ExoPlayer? = null
     private var playWhenReady = true
-    private var currentItem = 0
+    private var startItemIndex = C.INDEX_UNSET
     private var playbackPosition = 0L
     private var enableRepeat = false
     private var volume = 1f
@@ -240,10 +240,12 @@ class ExoPlayerUtility(
                 exoPlayer.repeatMode =
                     if (!enableRepeat) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ALL
                 exoPlayer.volume = volume
-                exoPlayer.seekTo(currentItem, playbackPosition)
-
+                val haveStartPosition = startItemIndex != C.INDEX_UNSET
+                if (haveStartPosition) {
+                    exoPlayer.seekTo(startItemIndex, playbackPosition)
+                }
                 if (mediaSource != null) {
-                    exoPlayer.setMediaSource(mediaSource!!)
+                    exoPlayer.setMediaSource(mediaSource!!, !haveStartPosition)
                     exoPlayer.prepareSource()
                 } else if (mediaItem != null) {
                     exoPlayer.setMediaItem(mediaItem!!)
@@ -269,7 +271,7 @@ class ExoPlayerUtility(
         handler.removeCallbacks(mRunnable)
         player?.let { exoPlayer ->
             playbackPosition = exoPlayer.currentPosition
-            currentItem = exoPlayer.currentMediaItemIndex
+            startItemIndex = exoPlayer.currentMediaItemIndex
             playWhenReady = exoPlayer.playWhenReady
             exoPlayer.removeListener(playbackStateListener)
             exoPlayer.release()

@@ -248,7 +248,7 @@ class ExoPlayerUtility(
                     exoPlayer.setMediaSource(mediaSource!!, !haveStartPosition)
                     exoPlayer.prepareSource()
                 } else if (mediaItem != null) {
-                    exoPlayer.setMediaItem(mediaItem!!)
+                    exoPlayer.setMediaItem(mediaItem!!, !haveStartPosition)
                     exoPlayer.prepareSource()
                 }
             }

@@ -75,8 +75,9 @@ fun AppCompatActivity.collectWhenStarted(
     }
 }
 
-fun <T> ViewModel.send(channel: Channel<T>, value: T) {
+inline fun <T> ViewModel.send(channel: Channel<T>, value: T, crossinline task: () -> Unit = {}) {
     viewModelScope.launch {
+        task()
         channel.send(value)
     }
 }

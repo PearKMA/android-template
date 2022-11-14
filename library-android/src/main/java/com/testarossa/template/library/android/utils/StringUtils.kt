@@ -62,15 +62,15 @@ fun String.hexDecodeString(): String {
     return output.toString()
 }
 
-fun readableFormat(
-    l: Long,
+fun Long.readableFormat(
     defaultValue: String = "0",
+    pattern: String = "#,##0.##",
     units: Array<String>,
     divisionUnit: Double
 ): String {
-    if (l <= 0) return defaultValue
-    val digitGroups = (log10(l.toDouble()) / log10(divisionUnit)).toInt()
-    return DecimalFormat("#,##0.##").format(
-        l / divisionUnit.pow(digitGroups.toDouble())
+    if (this <= 0) return defaultValue
+    val digitGroups = (log10(this.toDouble()) / log10(divisionUnit)).toInt()
+    return DecimalFormat(pattern).format(
+        this / divisionUnit.pow(digitGroups.toDouble())
     ).toString() + "" + units[digitGroups]
 }

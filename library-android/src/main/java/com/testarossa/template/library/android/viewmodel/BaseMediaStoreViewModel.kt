@@ -9,33 +9,43 @@ import android.os.Looper
 import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.testarossa.template.library.android.utils.extension.send
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-abstract class BaseMediaStoreViewModel(application: Application) :
+abstract class BaseMediaStoreViewModel<Event : Any>(application: Application) :
     AndroidViewModel(application) {
     //region Const and Fields
     private var contentObserver: ContentObserver? = null
+
+    private val eventsChannel = Channel<Event>()
+    val events = eventsChannel.receiveAsFlow()
     //endregion
 
     //region abstract methods
-    abstract suspend fun actionFetchData(isStorageChange: Boolean = false)
+    abstract suspend fun actionFetchData()
     //endregion
 
     //region open methods
-    open fun fetchData(isStorageChange: Boolean = false) {
+    protected fun fetchData() {
         viewModelScope.launch {
-            actionFetchData(isStorageChange)
+            actionFetchData()
             if (contentObserver == null) {
                 contentObserver = getApplication<Application>().contentResolver.registerObserver(
                     getUriStore()
                 ) {
-                    fetchData(true)
+                    fetchData()
                 }
             }
         }
     }
 
-    open fun getUriStore(): Uri = MediaStore.Files.getContentUri("external")
+    protected fun sendEvent(event: Event) {
+        send(eventsChannel, event)
+    }
+
+    protected fun getUriStore(): Uri = MediaStore.Files.getContentUri("external")
     //endregion
 
     override fun onCleared() {

@@ -1,4 +1,4 @@
-package com.testarossa.template.library.android.utils.media
+package com.hunglvv.renaissance.library.android.utils.media
 
 import android.content.Context
 import android.os.Handler
@@ -18,28 +18,36 @@ import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.google.android.exoplayer2.upstream.cache.CacheDataSource
 import com.google.android.exoplayer2.upstream.cache.SimpleCache
 import com.google.android.exoplayer2.util.Util
+import com.testarossa.template.library.android.utils.media.AudioFocusUtility
+
 
 /**
 
 # How to use:
 
 private lateinit var exoUtility: ExoPlayerUtility
-exoUtility =
-ExoPlayerHelper(context = requireContext(), delay = 200L, playerView = null, runInBackground = false).apply {
-listener = object : ExoPlayerHelper.IExoPlayerCallback {
+exoPlayerUtility = ExoPlayerUtility(binding.playerView, requireContext()).apply {
+viewLifecycleOwner.lifecycle.addObserver(this)
+enableRepeat(true)
+setMedia()
+listener = object : ExoPlayerUtility.IExoPlayerCallback {
 override fun getDurationMedia(duration: Long) {
 }
 
 override fun onPlaybackPositionChanged(position: Long) {
-viewModel.onPlaybackPositionChange(position)
+
 }
 
-override fun onPlaybackStateChanged(playbackState: Int) {
+override fun onEndPlaying() {
+
+}
+
+override fun onLoadComplete() {
 
 }
 
 override fun onIsPlayingChanged(isPlaying: Boolean) {
-viewModel.onPlayingChange(isPlaying)
+
 }
 
 override fun onPlayerError(error: com.google.android.exoplayer2.PlaybackException) {
@@ -48,13 +56,12 @@ override fun onPlayerError(error: com.google.android.exoplayer2.PlaybackExceptio
 
 }
 }
-viewLifecycleOwner.lifecycle.addObserver(exoUtility)
 # set media:
 exoUtility.setMedia(MediaItem.fromUri(Uri.parse(event.path)))
 # change state playing:
 exoUtility.changeStatePlayer(event.playing)
-
  */
+
 
 class ExoPlayerUtility(
     private val playerView: StyledPlayerView?,
@@ -87,6 +94,7 @@ class ExoPlayerUtility(
     private var playbackPosition = 0L
     private var enableRepeat = false
     private var volume = 1f
+    private var stopped = false
 
     private var handler: Handler = Handler(Looper.getMainLooper())
     private var mRunnable: Runnable = object : Runnable {
@@ -290,8 +298,9 @@ class ExoPlayerUtility(
 
     private fun audioFocusListener() = object : AudioFocusUtility.MediaControlListener {
         override fun onPlayMedia() {
-            if (player == null) {
-                initializePlayer()
+            if (stopped) {
+                stopped = false
+                player?.prepare()
             } else {
                 player?.playWhenReady = true
             }
@@ -302,7 +311,8 @@ class ExoPlayerUtility(
         }
 
         override fun onStopMedia() {
-            releasePlayer()
+            stopped = true
+            player?.stop()
         }
     }
     // endregion

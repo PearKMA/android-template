@@ -160,10 +160,6 @@ class ExoPlayerUtility(
      */
     fun onPlayPauseMedia() {
         player?.let {
-            if (it.playbackState == ExoPlayer.STATE_ENDED) {
-                playbackPosition = 0L
-                player?.seekTo(playbackPosition)
-            }
             if (!it.isPlaying) {
                 audioHelper.tryPlayback()
             } else {
@@ -304,6 +300,10 @@ class ExoPlayerUtility(
                 stopped = false
                 player?.prepare()
             } else {
+                if (player?.playbackState == ExoPlayer.STATE_ENDED) {
+                    playbackPosition = 0L
+                    player?.seekTo(playbackPosition)
+                }
                 player?.playWhenReady = true
             }
         }

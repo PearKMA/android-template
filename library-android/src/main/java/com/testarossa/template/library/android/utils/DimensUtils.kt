@@ -48,3 +48,7 @@ val Context.screenHeight: Int
             Resources.getSystem().displayMetrics.heightPixels
         }
     }
+
+val Context.actionBarSize
+    get() = theme.obtainStyledAttributes(intArrayOf(android.R.attr.actionBarSize))
+        .let { attrs -> attrs.getDimension(0, 0F).also { attrs.recycle() } }

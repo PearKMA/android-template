@@ -6,8 +6,9 @@ import com.google.android.exoplayer2.upstream.cache.LeastRecentlyUsedCacheEvicto
 import com.google.android.exoplayer2.upstream.cache.SimpleCache
 import java.io.File
 
-open class BaseApplication : Application() {
+abstract class BaseApplication : Application() {
     companion object {
+        @JvmStatic
         protected lateinit var simpleCache: SimpleCache
         protected lateinit var leastRecentlyUsedCacheEvictor: LeastRecentlyUsedCacheEvictor
         protected lateinit var standaloneDatabaseProvider: StandaloneDatabaseProvider

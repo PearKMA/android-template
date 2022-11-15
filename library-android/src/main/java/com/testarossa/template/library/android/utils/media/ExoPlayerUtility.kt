@@ -74,6 +74,7 @@ class ExoPlayerUtility(
     interface IExoPlayerCallback {
         fun getDurationMedia(duration: Long) {}
         fun onPlaybackPositionChanged(position: Long) {}
+        fun onLoading() {}
         fun onLoadComplete() {}
         fun onEndPlaying() {}
         fun onIsPlayingChanged(isPlaying: Boolean) {}
@@ -277,11 +278,23 @@ class ExoPlayerUtility(
 
     private fun playbackStateListener() = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
-            if (playbackState == ExoPlayer.STATE_READY) {
-                listener?.getDurationMedia(player?.duration ?: 0L)
-                listener?.onLoadComplete()
-            } else if (playbackState == ExoPlayer.STATE_ENDED) {
-                listener?.onEndPlaying()
+            when (playbackState) {
+                ExoPlayer.STATE_READY -> {
+                    listener?.getDurationMedia(player?.duration ?: 0L)
+                    listener?.onLoadComplete()
+                }
+
+                ExoPlayer.STATE_ENDED -> {
+                    listener?.onEndPlaying()
+                }
+
+                ExoPlayer.STATE_BUFFERING -> {
+                    listener?.onLoading()
+                }
+
+                Player.STATE_IDLE -> {
+
+                }
             }
         }
 

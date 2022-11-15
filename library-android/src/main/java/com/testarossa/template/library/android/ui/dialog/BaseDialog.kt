@@ -46,7 +46,7 @@ abstract class BaseDialog<BD : ViewDataBinding> : DialogFragment() {
                 handleBackPress()
             }
         }
-        requireActivity().onBackPressedDispatcher.addCallback(onBackPressedCallback)
+        activity?.onBackPressedDispatcher?.addCallback(this, onBackPressedCallback)
         initViews()
     }
 

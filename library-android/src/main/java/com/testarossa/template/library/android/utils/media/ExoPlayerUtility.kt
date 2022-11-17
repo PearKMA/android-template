@@ -19,6 +19,8 @@ import com.google.android.exoplayer2.upstream.cache.CacheDataSource
 import com.google.android.exoplayer2.upstream.cache.SimpleCache
 import com.google.android.exoplayer2.util.Util
 import com.testarossa.template.library.android.utils.media.AudioFocusUtility
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 
 
 /**
@@ -63,11 +65,9 @@ exoUtility.changeStatePlayer(event.playing)
  */
 
 
-class ExoPlayerUtility(
-    private val playerView: StyledPlayerView?,
-    private val context: Context,
-    private val runInBackground: Boolean = false,
-    delay: Long = 1000
+class ExoPlayerUtility @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val audioFocusUtility: AudioFocusUtility
 ) : DefaultLifecycleObserver {
 
     // region Const and Fields
@@ -81,11 +81,10 @@ class ExoPlayerUtility(
         fun onPlayerError(error: PlaybackException) {}
     }
 
+    private var playerView: StyledPlayerView? = null
     private val playbackStateListener: Player.Listener = playbackStateListener()
     private val audioFocusListener: AudioFocusUtility.MediaControlListener = audioFocusListener()
-    private val audioHelper: AudioFocusUtility by lazy {
-        AudioFocusUtility(context, audioFocusListener)
-    }
+
     var listener: IExoPlayerCallback? = null
     private var mediaItem: MediaItem? = null
     private var mediaSource: BaseMediaSource? = null
@@ -95,7 +94,10 @@ class ExoPlayerUtility(
     private var playbackPosition = 0L
     private var enableRepeat = false
     private var volume = 1f
+    private var runInBackground = false
     private var stopped = false
+
+    private var delay: Long = DEFAULT_DELAY_INTERVAL
 
     private var handler: Handler = Handler(Looper.getMainLooper())
     private var mRunnable: Runnable = object : Runnable {
@@ -108,10 +110,25 @@ class ExoPlayerUtility(
         }
     }
 
+    init {
+        audioFocusUtility.setListener(audioFocusListener)
+    }
     // endregion
 
     // region controller
+    fun setPlayerView(playerView: StyledPlayerView?) {
+        this.playerView = playerView
+    }
+
     fun getPlayer() = player
+
+    fun enablePlayInBackground(enable: Boolean) {
+        runInBackground = enable
+    }
+
+    fun setDelay(delay: Long) {
+        this.delay = delay
+    }
 
     fun setSpeed(@FloatRange(from = 0.0, fromInclusive = false) speed: Float) {
         player?.setPlaybackSpeed(speed)
@@ -150,7 +167,7 @@ class ExoPlayerUtility(
 
     fun changeStatePlayer(playing: Boolean) {
         if (playing) {
-            audioHelper.tryPlayback()
+            audioFocusUtility.tryPlayback()
         } else {
             player?.playWhenReady = false
         }
@@ -162,7 +179,7 @@ class ExoPlayerUtility(
     fun onPlayPauseMedia() {
         player?.let {
             if (!it.isPlaying) {
-                audioHelper.tryPlayback()
+                audioFocusUtility.tryPlayback()
             } else {
                 it.playWhenReady = false
             }
@@ -254,7 +271,7 @@ class ExoPlayerUtility(
 
     private fun ExoPlayer.prepareSource() {
         if (playWhenReady) {
-            audioHelper.tryPlayback()
+            audioFocusUtility.tryPlayback()
         }
         prepare()
     }
@@ -264,7 +281,7 @@ class ExoPlayerUtility(
      * Release media player
      */
     private fun releasePlayer() {
-        audioHelper.finishPlayback()
+        audioFocusUtility.finishPlayback()
         handler.removeCallbacks(mRunnable)
         player?.let { exoPlayer ->
             playbackPosition = exoPlayer.currentPosition
@@ -331,4 +348,8 @@ class ExoPlayerUtility(
         }
     }
     // endregion
+
+    companion object {
+        private const val DEFAULT_DELAY_INTERVAL = 1000L
+    }
 }

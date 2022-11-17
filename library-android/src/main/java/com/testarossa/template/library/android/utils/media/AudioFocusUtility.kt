@@ -8,10 +8,15 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import androidx.annotation.RequiresApi
+import androidx.lifecycle.DefaultLifecycleObserver
 import com.testarossa.template.library.android.utils.extension.isBuildLargerThan
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
-class AudioFocusUtility(context: Context, private val listener: MediaControlListener) {
+class AudioFocusUtility @Inject constructor(
+    @ApplicationContext private val context: Context
+) : DefaultLifecycleObserver {
     // region Const and Fields
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var isRequested = false
@@ -20,9 +25,11 @@ class AudioFocusUtility(context: Context, private val listener: MediaControlList
     private var resumeOnFocusGain = false
     private var playbackNowAuthorized = false
 
+    private var listener: MediaControlListener? = null
+
     private val handler = Handler(Looper.getMainLooper())
     private var delayedStopRunnable = Runnable {
-        listener.onStopMedia()
+        listener?.onStopMedia()
     }
 
     private val afChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
@@ -34,7 +41,7 @@ class AudioFocusUtility(context: Context, private val listener: MediaControlList
                     resumeOnFocusGain = false
                     playbackDelayed = false
                 }
-                listener.onPauseMedia()
+                listener?.onPauseMedia()
                 // Wait 30 seconds before stopping playback
                 handler.postDelayed(delayedStopRunnable, TimeUnit.SECONDS.toMillis(30))
             }
@@ -46,7 +53,7 @@ class AudioFocusUtility(context: Context, private val listener: MediaControlList
                     resumeOnFocusGain = true
                     playbackDelayed = false
                 }
-                listener.onPauseMedia()
+                listener?.onPauseMedia()
             }
 
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
@@ -61,7 +68,7 @@ class AudioFocusUtility(context: Context, private val listener: MediaControlList
                         playbackDelayed = false
                         resumeOnFocusGain = false
                     }
-                    listener.onPlayMedia()
+                    listener?.onPlayMedia()
                 }
             }
         }
@@ -73,9 +80,13 @@ class AudioFocusUtility(context: Context, private val listener: MediaControlList
     // endregion
 
     // region interactive
+    fun setListener(listener: MediaControlListener) {
+        this.listener = listener
+    }
+
     fun tryPlayback() {
         if (isRequested) {
-            listener.onPlayMedia()
+            listener?.onPlayMedia()
             return
         }
         if (isBuildLargerThan(Build.VERSION_CODES.O)) {
@@ -97,7 +108,7 @@ class AudioFocusUtility(context: Context, private val listener: MediaControlList
                 playbackNowAuthorized = when (res) {
                     AudioManager.AUDIOFOCUS_REQUEST_FAILED -> false
                     AudioManager.AUDIOFOCUS_REQUEST_GRANTED -> {
-                        listener.onPlayMedia()
+                        listener?.onPlayMedia()
                         true
                     }
 
@@ -121,7 +132,7 @@ class AudioFocusUtility(context: Context, private val listener: MediaControlList
             )
 
             if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-                listener.onPlayMedia()
+                listener?.onPlayMedia()
             }
         }
         isRequested = true

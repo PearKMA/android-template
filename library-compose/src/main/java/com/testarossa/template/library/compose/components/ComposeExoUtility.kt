@@ -104,8 +104,8 @@ fun VideoPlayer(
 
         }
         exoPlayer.addListener(playbackStateListener)
-        val manageAudio =
-            AudioFocusUtility(context, object : AudioFocusUtility.MediaControlListener {
+        val manageAudio = AudioFocusUtility(context).apply {
+            setListener(object : AudioFocusUtility.MediaControlListener {
                 override fun onPlayMedia() {
                     exoPlayer.playWhenReady = true
                 }
@@ -118,6 +118,7 @@ fun VideoPlayer(
                     exoPlayer.stop()
                 }
             })
+        }
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {

@@ -1,4 +1,4 @@
-package com.testarossa.template.library.android.utils
+package com.testarossa.template.library.android.utils.network
 
 import android.annotation.SuppressLint
 import android.content.Context

@@ -6,20 +6,22 @@ import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
 import androidx.core.net.toUri
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import com.google.android.exoplayer2.util.Util
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
+import javax.inject.Inject
 
-open class MediaPlayerUtility(
-    private val context: Context,
-    private val mediaListener: IMediaPlayerListener
+class MediaPlayerUtility @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val audioFocusUtility: AudioFocusUtility
 ) :
-    AudioFocusUtility.MediaControlListener {
+    AudioFocusUtility.MediaControlListener, DefaultLifecycleObserver {
     // region Const and Fields
-    private val audioFocusUtility by lazy {
-        AudioFocusUtility(context, this)
-    }
-
     private var player: MediaPlayer? = null
+    private var mediaListener: IMediaPlayerListener? = null
+
     private var speed = 1.0f
     private var fromAssets = false
     private var mediaUrl = ""
@@ -29,23 +31,36 @@ open class MediaPlayerUtility(
     private var playWhenReady = false
     private var enableRepeat = false
     private var delay = DEFAULT_DELAY_INTERVAL
+    private var runInBackground = false
 
     private var handler: Handler = Handler(Looper.getMainLooper())
     private var mRunnable: Runnable = object : Runnable {
         override fun run() {
             if (player != null) {
                 val current = player!!.currentPosition
-                mediaListener.onPlaybackPositionChanged(current.toLong())
+                mediaListener?.onPlaybackPositionChanged(current.toLong())
                 handler.postDelayed(this, delay)
             }
         }
     }
+
+    init {
+        audioFocusUtility.setListener(this)
+    }
     // endregion
 
     // region controller
-    open fun getPlayer() = player
+    fun setListener(listener: IMediaPlayerListener) {
+        this.mediaListener = listener
+    }
 
-    open fun setSpeed(speed: Float) {
+    fun enablePlayInBackground(enable: Boolean) {
+        runInBackground = enable
+    }
+
+    fun getPlayer() = player
+
+    fun setSpeed(speed: Float) {
         this.speed = speed
         if (player != null) {
             playWhenReady = player!!.isPlaying
@@ -54,23 +69,23 @@ open class MediaPlayerUtility(
         }
     }
 
-    open fun setDelayHandlePosition(time: Long) {
+    fun setDelayHandlePosition(time: Long) {
         delay = time
     }
 
-    open fun enableRepeat(enable: Boolean) {
+    fun enableRepeat(enable: Boolean) {
         enableRepeat = enable
     }
 
-    open fun setPlayFromAssets(fromAssets: Boolean) {
+    fun setPlayFromAssets(fromAssets: Boolean) {
         this.fromAssets = fromAssets
     }
 
-    open fun setTypeUri(isUri: Boolean) {
+    fun setTypeUri(isUri: Boolean) {
         typeUri = isUri
     }
 
-    open fun setMedia(mediaUrl: String, playWhenReady: Boolean = false) {
+    fun setMedia(mediaUrl: String, playWhenReady: Boolean = false) {
         this.mediaUrl = mediaUrl
         this.playWhenReady = playWhenReady
         if (player == null) {
@@ -81,7 +96,7 @@ open class MediaPlayerUtility(
         }
     }
 
-    open fun changeStatePlayer(playing: Boolean) {
+    fun changeStatePlayer(playing: Boolean) {
         if (playing) {
             if (player?.isPlaying == true && isMediaOpened) {
                 player?.pause()
@@ -93,7 +108,7 @@ open class MediaPlayerUtility(
         }
     }
 
-    open fun onPlayPauseMedia() {
+    fun onPlayPauseMedia() {
         player?.let {
             if (!it.isPlaying) {
                 audioFocusUtility.tryPlayback()
@@ -103,42 +118,46 @@ open class MediaPlayerUtility(
         }
     }
 
-    open fun seekTo(time: Int) {
+    fun seekTo(time: Int) {
         player?.seekTo(time)
     }
     // endregion
 
     // region lifecycle methods
-    open fun onStart() {
-        if (Util.SDK_INT > 23) {
+    override fun onStart(owner: LifecycleOwner) {
+        if (Util.SDK_INT > 23 && !runInBackground) {
             initializePlayer()
         }
     }
 
-    open fun onResume() {
-        if ((Util.SDK_INT <= 23 || player == null)) {
+    override fun onResume(owner: LifecycleOwner) {
+        if ((Util.SDK_INT <= 23 || player == null) && !runInBackground) {
             initializePlayer()
         }
     }
 
-    open fun onPause() {
-        if (Util.SDK_INT <= 23) {
+    override fun onPause(owner: LifecycleOwner) {
+        if (Util.SDK_INT <= 23 && !runInBackground) {
             releasePlayer()
         }
     }
 
-    open fun onStop() {
-        if (Util.SDK_INT > 23) {
+    override fun onStop(owner: LifecycleOwner) {
+        if (Util.SDK_INT > 23 && !runInBackground) {
             releasePlayer()
         }
     }
 
-    open fun onCreate() {
-        initializePlayer()
+    override fun onCreate(owner: LifecycleOwner) {
+        if (runInBackground) {
+            initializePlayer()
+        }
     }
 
-    open fun onDestroy() {
-        releasePlayer()
+    override fun onDestroy(owner: LifecycleOwner) {
+        if (runInBackground) {
+            releasePlayer()
+        }
     }
     // endregion
 
@@ -153,14 +172,14 @@ open class MediaPlayerUtility(
             }
         }
 
-        mediaListener.onIsPlayingChanged(true)
+        mediaListener?.onIsPlayingChanged(true)
     }
 
     override fun onPauseMedia() {
         if (isMediaOpened) {
             player?.pause()
         }
-        mediaListener.onIsPlayingChanged(false)
+        mediaListener?.onIsPlayingChanged(false)
     }
 
     override fun onStopMedia() {
@@ -171,15 +190,15 @@ open class MediaPlayerUtility(
             audioFocusUtility.finishPlayback()
             isMediaOpened = false
             reset()
-            mediaListener.onPlaybackStateChanged(PlaybackState.IDLE)
+            mediaListener?.onPlaybackStateChanged(PlaybackState.IDLE)
         }
-        mediaListener.onIsPlayingChanged(false)
+        mediaListener?.onIsPlayingChanged(false)
     }
     // endregion
 
     // region private methods
     private fun initializePlayer() {
-        mediaListener.onPlaybackStateChanged(PlaybackState.IDLE)
+        mediaListener?.onPlaybackStateChanged(PlaybackState.IDLE)
         isMediaOpened = false
         player = MediaPlayer().apply {
             setAudioAttributes(
@@ -197,21 +216,21 @@ open class MediaPlayerUtility(
                     it.playbackParams = params
                     audioFocusUtility.tryPlayback()
                 }
-                mediaListener.getDurationMedia(it.duration.toLong())
-                mediaListener.onPlaybackStateChanged(PlaybackState.READY)
+                mediaListener?.getDurationMedia(it.duration.toLong())
+                mediaListener?.onPlaybackStateChanged(PlaybackState.READY)
             }
             setOnCompletionListener {
                 if (enableRepeat) {
                     it.start()
                 } else {
-                    mediaListener.onIsPlayingChanged(false)
+                    mediaListener?.onIsPlayingChanged(false)
                 }
-                mediaListener.onPlaybackStateChanged(PlaybackState.ENDED)
+                mediaListener?.onPlaybackStateChanged(PlaybackState.ENDED)
             }
             setOnErrorListener { mp, w, c ->
                 isMediaOpened = false
                 mp.reset()
-                mediaListener.onPlayerError(w, c)
+                mediaListener?.onPlayerError(w, c)
                 true
             }
             prepareSource()

@@ -9,19 +9,19 @@ import androidx.core.net.toUri
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.google.android.exoplayer2.util.Util
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
-import javax.inject.Inject
 
-class MediaPlayerUtility @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val audioFocusUtility: AudioFocusUtility
+open class MediaPlayerUtility(
+    private val context: Context,
+    private val mediaListener: IMediaPlayerListener
 ) :
     AudioFocusUtility.MediaControlListener, DefaultLifecycleObserver {
     // region Const and Fields
-    private var player: MediaPlayer? = null
-    private var mediaListener: IMediaPlayerListener? = null
+    private val audioFocusUtility by lazy {
+        AudioFocusUtility(context, this)
+    }
 
+    private var player: MediaPlayer? = null
     private var speed = 1.0f
     private var fromAssets = false
     private var mediaUrl = ""
@@ -38,22 +38,14 @@ class MediaPlayerUtility @Inject constructor(
         override fun run() {
             if (player != null) {
                 val current = player!!.currentPosition
-                mediaListener?.onPlaybackPositionChanged(current.toLong())
+                mediaListener.onPlaybackPositionChanged(current.toLong())
                 handler.postDelayed(this, delay)
             }
         }
     }
-
-    init {
-        audioFocusUtility.setListener(this)
-    }
     // endregion
 
     // region controller
-    fun setListener(listener: IMediaPlayerListener) {
-        this.mediaListener = listener
-    }
-
     fun enablePlayInBackground(enable: Boolean) {
         runInBackground = enable
     }
@@ -172,14 +164,14 @@ class MediaPlayerUtility @Inject constructor(
             }
         }
 
-        mediaListener?.onIsPlayingChanged(true)
+        mediaListener.onIsPlayingChanged(true)
     }
 
     override fun onPauseMedia() {
         if (isMediaOpened) {
             player?.pause()
         }
-        mediaListener?.onIsPlayingChanged(false)
+        mediaListener.onIsPlayingChanged(false)
     }
 
     override fun onStopMedia() {
@@ -190,15 +182,15 @@ class MediaPlayerUtility @Inject constructor(
             audioFocusUtility.finishPlayback()
             isMediaOpened = false
             reset()
-            mediaListener?.onPlaybackStateChanged(PlaybackState.IDLE)
+            mediaListener.onPlaybackStateChanged(PlaybackState.IDLE)
         }
-        mediaListener?.onIsPlayingChanged(false)
+        mediaListener.onIsPlayingChanged(false)
     }
     // endregion
 
     // region private methods
     private fun initializePlayer() {
-        mediaListener?.onPlaybackStateChanged(PlaybackState.IDLE)
+        mediaListener.onPlaybackStateChanged(PlaybackState.IDLE)
         isMediaOpened = false
         player = MediaPlayer().apply {
             setAudioAttributes(
@@ -216,21 +208,21 @@ class MediaPlayerUtility @Inject constructor(
                     it.playbackParams = params
                     audioFocusUtility.tryPlayback()
                 }
-                mediaListener?.getDurationMedia(it.duration.toLong())
-                mediaListener?.onPlaybackStateChanged(PlaybackState.READY)
+                mediaListener.getDurationMedia(it.duration.toLong())
+                mediaListener.onPlaybackStateChanged(PlaybackState.READY)
             }
             setOnCompletionListener {
                 if (enableRepeat) {
                     it.start()
                 } else {
-                    mediaListener?.onIsPlayingChanged(false)
+                    mediaListener.onIsPlayingChanged(false)
                 }
-                mediaListener?.onPlaybackStateChanged(PlaybackState.ENDED)
+                mediaListener.onPlaybackStateChanged(PlaybackState.ENDED)
             }
             setOnErrorListener { mp, w, c ->
                 isMediaOpened = false
                 mp.reset()
-                mediaListener?.onPlayerError(w, c)
+                mediaListener.onPlayerError(w, c)
                 true
             }
             prepareSource()

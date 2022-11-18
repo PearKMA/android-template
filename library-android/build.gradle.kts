@@ -2,7 +2,6 @@ plugins {
     id("com.android.library")
     kotlin("android")
     kotlin("kapt")
-    id("com.google.dagger.hilt.android")
 }
 android {
     namespace = "com.testarossa.template.library.android"
@@ -48,7 +47,6 @@ android {
 dependencies {
     kapt(libs.room.compiler)
     kapt(libs.glide.compiler)
-    kapt(libs.hilt.compiler)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -64,7 +62,6 @@ dependencies {
     implementation(libs.recyclerview)
     implementation(libs.exo.core)
     implementation(libs.exo.ui)
-    implementation(libs.hilt)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     implementation(libs.viewpager2)

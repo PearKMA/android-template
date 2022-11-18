@@ -11,6 +11,7 @@ import androidx.databinding.BindingAdapter
 import com.testarossa.template.library.android.utils.NotchUtils.getInternalDimensionSize
 import com.testarossa.template.library.android.utils.extension.*
 import com.testarossa.template.library.android.utils.loadBackground
+import com.testarossa.template.library.android.utils.loadCenterCrop
 import com.testarossa.template.library.android.utils.loadNormal
 import com.testarossa.template.library.android.utils.loadRoundedCorner
 
@@ -133,8 +134,8 @@ fun ImageView.loadRoundedImage(source: Any?, corner: Float = 0f) {
     }
 }
 
-@BindingAdapter("loadCenterCrop")
-fun ImageView.loadCenterCrop(source: Any?) {
+@BindingAdapter("loadSourceCenterCrop")
+fun ImageView.loadSourceCenterCrop(source: Any?) {
     source?.let {
         loadCenterCrop(source)
     }

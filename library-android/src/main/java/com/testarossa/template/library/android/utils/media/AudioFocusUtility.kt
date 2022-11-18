@@ -8,15 +8,10 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import androidx.annotation.RequiresApi
-import androidx.lifecycle.DefaultLifecycleObserver
 import com.testarossa.template.library.android.utils.extension.isBuildLargerThan
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
 
-class AudioFocusUtility @Inject constructor(
-    @ApplicationContext private val context: Context
-) : DefaultLifecycleObserver {
+class AudioFocusUtility(context: Context, private val listener: MediaControlListener) {
     // region Const and Fields
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var isRequested = false
@@ -25,11 +20,9 @@ class AudioFocusUtility @Inject constructor(
     private var resumeOnFocusGain = false
     private var playbackNowAuthorized = false
 
-    private var listener: MediaControlListener? = null
-
     private val handler = Handler(Looper.getMainLooper())
     private var delayedStopRunnable = Runnable {
-        listener?.onStopMedia()
+        listener.onStopMedia()
     }
 
     private val afChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
@@ -41,7 +34,7 @@ class AudioFocusUtility @Inject constructor(
                     resumeOnFocusGain = false
                     playbackDelayed = false
                 }
-                listener?.onPauseMedia()
+                listener.onPauseMedia()
                 // Wait 30 seconds before stopping playback
                 handler.postDelayed(delayedStopRunnable, TimeUnit.SECONDS.toMillis(30))
             }
@@ -53,7 +46,7 @@ class AudioFocusUtility @Inject constructor(
                     resumeOnFocusGain = true
                     playbackDelayed = false
                 }
-                listener?.onPauseMedia()
+                listener.onPauseMedia()
             }
 
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
@@ -68,7 +61,7 @@ class AudioFocusUtility @Inject constructor(
                         playbackDelayed = false
                         resumeOnFocusGain = false
                     }
-                    listener?.onPlayMedia()
+                    listener.onPlayMedia()
                 }
             }
         }
@@ -80,13 +73,9 @@ class AudioFocusUtility @Inject constructor(
     // endregion
 
     // region interactive
-    fun setListener(listener: MediaControlListener) {
-        this.listener = listener
-    }
-
     fun tryPlayback() {
         if (isRequested) {
-            listener?.onPlayMedia()
+            listener.onPlayMedia()
             return
         }
         if (isBuildLargerThan(Build.VERSION_CODES.O)) {
@@ -108,7 +97,7 @@ class AudioFocusUtility @Inject constructor(
                 playbackNowAuthorized = when (res) {
                     AudioManager.AUDIOFOCUS_REQUEST_FAILED -> false
                     AudioManager.AUDIOFOCUS_REQUEST_GRANTED -> {
-                        listener?.onPlayMedia()
+                        listener.onPlayMedia()
                         true
                     }
 
@@ -132,7 +121,7 @@ class AudioFocusUtility @Inject constructor(
             )
 
             if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-                listener?.onPlayMedia()
+                listener.onPlayMedia()
             }
         }
         isRequested = true

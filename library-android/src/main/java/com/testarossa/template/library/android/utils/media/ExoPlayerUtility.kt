@@ -1,4 +1,4 @@
-package com.hunglvv.renaissance.library.android.utils.media
+package com.testarossa.template.library.android.utils.media
 
 import android.content.Context
 import android.os.Handler
@@ -18,9 +18,6 @@ import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.google.android.exoplayer2.upstream.cache.CacheDataSource
 import com.google.android.exoplayer2.upstream.cache.SimpleCache
 import com.google.android.exoplayer2.util.Util
-import com.testarossa.template.library.android.utils.media.AudioFocusUtility
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
 
 
 /**
@@ -65,9 +62,11 @@ exoUtility.changeStatePlayer(event.playing)
  */
 
 
-class ExoPlayerUtility @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val audioFocusUtility: AudioFocusUtility
+class ExoPlayerUtility(
+    private val playerView: StyledPlayerView?,
+    private val context: Context,
+    private val runInBackground: Boolean = false,
+    delay: Long = 1000
 ) : DefaultLifecycleObserver {
 
     // region Const and Fields
@@ -81,9 +80,11 @@ class ExoPlayerUtility @Inject constructor(
         fun onPlayerError(error: PlaybackException) {}
     }
 
-    private var playerView: StyledPlayerView? = null
     private val playbackStateListener: Player.Listener = playbackStateListener()
     private val audioFocusListener: AudioFocusUtility.MediaControlListener = audioFocusListener()
+    private val audioFocusUtility: AudioFocusUtility by lazy {
+        AudioFocusUtility(context, audioFocusListener)
+    }
 
     var listener: IExoPlayerCallback? = null
     private var mediaItem: MediaItem? = null
@@ -94,10 +95,7 @@ class ExoPlayerUtility @Inject constructor(
     private var playbackPosition = 0L
     private var enableRepeat = false
     private var volume = 1f
-    private var runInBackground = false
     private var stopped = false
-
-    private var delay: Long = DEFAULT_DELAY_INTERVAL
 
     private var handler: Handler = Handler(Looper.getMainLooper())
     private var mRunnable: Runnable = object : Runnable {
@@ -110,25 +108,10 @@ class ExoPlayerUtility @Inject constructor(
         }
     }
 
-    init {
-        audioFocusUtility.setListener(audioFocusListener)
-    }
     // endregion
 
     // region controller
-    fun setPlayerView(playerView: StyledPlayerView?) {
-        this.playerView = playerView
-    }
-
     fun getPlayer() = player
-
-    fun enablePlayInBackground(enable: Boolean) {
-        runInBackground = enable
-    }
-
-    fun setDelay(delay: Long) {
-        this.delay = delay
-    }
 
     fun setSpeed(@FloatRange(from = 0.0, fromInclusive = false) speed: Float) {
         player?.setPlaybackSpeed(speed)
@@ -348,8 +331,4 @@ class ExoPlayerUtility @Inject constructor(
         }
     }
     // endregion
-
-    companion object {
-        private const val DEFAULT_DELAY_INTERVAL = 1000L
-    }
 }

@@ -4,7 +4,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
@@ -27,49 +26,55 @@ inline fun <T> MutableStateFlow<T>.update(function: (T) -> T) {
 }
 
 // require lifecycle runtime
-fun <T> Fragment.collectWhenStarted(
+fun <T> Fragment.collectInState(
     flow: Flow<T>,
     firstTimeDelay: Long = 0L,
+    state: Lifecycle.State = Lifecycle.State.STARTED,
+    action: suspend (value: T) -> Unit
+) {
+    viewLifecycleOwner.lifecycleScope.launch {
+        delay(firstTimeDelay)
+        viewLifecycleOwner.repeatOnLifecycle(state) {
+            flow.collect(action)
+        }
+    }
+}
+
+fun <T> AppCompatActivity.collectInState(
+    flow: Flow<T>,
+    firstTimeDelay: Long = 0L,
+    state: Lifecycle.State = Lifecycle.State.STARTED,
     action: suspend (value: T) -> Unit
 ) {
     lifecycleScope.launch {
         delay(firstTimeDelay)
-        flow.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
-            .collect(action)
+        repeatOnLifecycle(state) {
+            flow.collect(action)
+        }
     }
 }
 
-fun <T> AppCompatActivity.collectWhenStarted(
-    flow: Flow<T>,
+fun Fragment.collectInState(
     firstTimeDelay: Long = 0L,
-    action: suspend (value: T) -> Unit
-) {
-    lifecycleScope.launch {
-        delay(firstTimeDelay)
-        flow.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
-            .collect(action)
-    }
-}
-
-fun Fragment.collectWhenStarted(
-    firstTimeDelay: Long = 0L,
+    state: Lifecycle.State = Lifecycle.State.STARTED,
     action: (scope: CoroutineScope) -> Unit
 ) {
     viewLifecycleOwner.lifecycleScope.launch {
         delay(firstTimeDelay)
-        viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+        viewLifecycleOwner.repeatOnLifecycle(state) {
             action(this)
         }
     }
 }
 
-fun AppCompatActivity.collectWhenStarted(
+fun AppCompatActivity.collectInState(
     firstTimeDelay: Long = 0L,
+    state: Lifecycle.State = Lifecycle.State.STARTED,
     action: (scope: CoroutineScope) -> Unit
 ) {
     lifecycleScope.launch {
         delay(firstTimeDelay)
-        repeatOnLifecycle(Lifecycle.State.STARTED) {
+        repeatOnLifecycle(state) {
             action(this)
         }
     }

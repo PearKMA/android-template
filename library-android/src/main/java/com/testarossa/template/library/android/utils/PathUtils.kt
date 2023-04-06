@@ -12,8 +12,14 @@ import android.provider.MediaStore
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import com.testarossa.template.library.android.utils.extension.PHOTO_FOLDER
+import com.testarossa.template.library.android.utils.extension.PHOTO_SUFFIX
+import com.testarossa.template.library.android.utils.extension.VIDEO_FOLDER
+import com.testarossa.template.library.android.utils.extension.VIDEO_SUFFIX
 import com.testarossa.template.library.android.utils.extension.isBuildLargerThan
 import java.io.File
+import java.util.UUID
+
 
 @Suppress("DEPRECATION")
 fun getRootPath(context: Context): String {
@@ -110,6 +116,40 @@ fun String.getCachePath(context: Context): File? {
         imageUrl
     } else null
 }
+
+fun Context.getMediaOutputFile(typePhoto: Boolean, name: String? = null): String {
+    val outputPath = getOutputFileDirectory(this).absolutePath
+    val outputDir = if (typePhoto) {
+        File(outputPath, PHOTO_FOLDER).apply { if (!exists()) mkdirs() }
+    } else {
+        File(outputPath, VIDEO_FOLDER).apply { if (!exists()) mkdirs() }
+    }
+    val name = UUID.randomUUID()
+    val outputFile = File(
+        outputDir,
+        "${name}${if (typePhoto) PHOTO_SUFFIX else VIDEO_SUFFIX}"
+    )
+    return outputFile.absolutePath
+}
+
+fun Context.getTempOutputFile(typePhoto: Boolean, name: String? = null): String {
+    val outputDir = if (typePhoto) {
+        PHOTO_FOLDER.getCachePath(this)
+    } else {
+        VIDEO_FOLDER.getCachePath(this)
+    }
+    val outputFile = File(
+        outputDir,
+        name ?: "${
+            formatTimePattern(
+                System.currentTimeMillis(),
+                "yyyyMMddHHmmss"
+            )
+        }${if (typePhoto) PHOTO_SUFFIX else VIDEO_SUFFIX}"
+    )
+    return outputFile.absolutePath
+}
+
 
 /**
  * Lấy đường dẫn file từ uri

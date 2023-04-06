@@ -2,12 +2,19 @@ package com.testarossa.template.library.android.adapter
 
 import android.graphics.Color
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.util.TypedValue
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.children
 import androidx.databinding.BindingAdapter
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DecodeFormat
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import com.testarossa.template.library.android.utils.NotchUtils.getInternalDimensionSize
 import com.testarossa.template.library.android.utils.extension.*
 import com.testarossa.template.library.android.utils.loadBackground
@@ -33,7 +40,6 @@ fun View.onDebounceLongClick(listener: View.OnClickListener) {
     }
 }
 
-@Suppress("DEPRECATION")
 @BindingAdapter("paddingTop")
 fun View.setPaddingTop(space: Float) {
     if (isBuildLargerThan(buildVersion.P)) {
@@ -53,25 +59,21 @@ fun View.setPaddingTop(space: Float) {
     }
 }
 
-@Suppress("DEPRECATION")
+@BindingAdapter("marginTopTranslucent")
+fun View.setMarginTopTranslucent(space: Float) {
+    if (this.layoutParams is ConstraintLayout.LayoutParams) {
+        val params = this.layoutParams as ConstraintLayout.LayoutParams
+        val statusBarHeight = this.context.getInternalDimensionSize(
+            STATUS_BAR_HEIGHT
+        )
+        val actionBarSize = statusBarHeight + space
+        params.setMargins(0, actionBarSize.toInt(), 0, 0)
+    }
+}
+
 @BindingAdapter("marginTop")
 fun View.setMarginTop(space: Float) {
-    if (isBuildLargerThan(buildVersion.P)) {
-        this.setOnApplyWindowInsetsListener { _, windowInsets ->
-            val safeHeight = windowInsets.displayCutout?.safeInsetTop ?: 0
-            val actionBarSize = safeHeight + space
-
-            val params = this.layoutParams as ConstraintLayout.LayoutParams
-            params.setMargins(0, actionBarSize.toInt(), 0, 0)
-
-            /*if (isBuildLargerThan(buildVersion.R)) {
-                WindowInsets.CONSUMED
-            } else {
-                windowInsets.consumeDisplayCutout()
-            }*/
-            windowInsets
-        }
-    } else if (this.layoutParams is ConstraintLayout.LayoutParams) {
+    if (this.layoutParams is ConstraintLayout.LayoutParams) {
         val params = this.layoutParams as ConstraintLayout.LayoutParams
         val statusBarHeight = this.context.getInternalDimensionSize(
             STATUS_BAR_HEIGHT
@@ -88,22 +90,7 @@ fun View.setMarginTop(space: Float) {
 
 @BindingAdapter("marginBottom")
 fun View.setMarginBottom(space: Float) {
-    if (isBuildLargerThan(buildVersion.P)) {
-        this.setOnApplyWindowInsetsListener { _, windowInsets ->
-            val safeHeight = windowInsets.displayCutout?.safeInsetTop ?: 0
-            val actionBarSize = safeHeight + space
-
-            val params = this.layoutParams as ConstraintLayout.LayoutParams
-            params.setMargins(0, 0, 0, actionBarSize.toInt())
-
-            /*if (isBuildLargerThan(buildVersion.R)) {
-                WindowInsets.CONSUMED
-            } else {
-                windowInsets.consumeDisplayCutout()
-            }*/
-            windowInsets
-        }
-    } else if (this.layoutParams is ConstraintLayout.LayoutParams) {
+    if (this.layoutParams is ConstraintLayout.LayoutParams) {
         val params = this.layoutParams as ConstraintLayout.LayoutParams
         val navigationBarHeight = this.context.getInternalDimensionSize(
             NAVIGATION_BAR_HEIGHT
@@ -121,6 +108,22 @@ fun View.setMarginBottom(space: Float) {
 fun View.loadImageAsBackground(source: Any?) {
     source?.let {
         loadBackground(it)
+    }
+}
+
+@BindingAdapter("loadImageBackground")
+fun ImageView.loadImageBackground(source: Any?) {
+    this.post {
+        if (this.width > 0 && this.height > 0 && source != null) {
+            Glide.with(this)
+                .load(source)
+                .override(this.width, this.height)
+                .apply(RequestOptions().format(DecodeFormat.PREFER_RGB_565))
+                .centerCrop()
+                .diskCacheStrategy(DiskCacheStrategy.NONE)
+                .skipMemoryCache(true)
+                .into(this)
+        }
     }
 }
 
@@ -160,4 +163,24 @@ fun TextView.setTextDrawable(
     drawBottom: Drawable?
 ) {
     setCompoundDrawablesWithIntrinsicBounds(drawStart, drawTop, drawEnd, drawBottom)
+}
+
+@BindingAdapter("setEnable")
+fun View.setAllEnable(enabled: Boolean) {
+    isEnabled = enabled
+    isClickable = enabled
+    isFocusable = enabled
+    if (this is ViewGroup) children.forEach { child -> child.setAllEnable(enabled) }
+}
+
+@BindingAdapter("tint_background")
+fun View.tintBackground(color: Int) {
+    background.setTint(color)
+}
+
+@BindingAdapter("loadImageAssets")
+fun ImageView.loadImageAssets(pathAssets: String) {
+    Glide.with(this)
+        .load(Uri.parse("file:///android_asset/$pathAssets"))
+        .into(this)
 }

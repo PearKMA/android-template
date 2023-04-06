@@ -16,6 +16,7 @@ import android.renderscript.RenderScript
 import android.renderscript.ScriptIntrinsicBlur
 import android.view.PixelCopy
 import android.view.View
+import androidx.core.view.drawToBitmap
 import com.testarossa.template.library.android.utils.extension.isBuildLargerThan
 import java.io.File
 import java.io.FileOutputStream
@@ -34,6 +35,19 @@ fun Bitmap?.saveFile(
     } catch (e: Exception) {
         e.printStackTrace()
         callback(false)
+    }
+}
+
+fun View.toBitmap(action: (Bitmap) -> Unit, reAction: () -> Unit) {
+    if (this.width > 0 && this.height > 0) {
+        val bitmap = this.drawToBitmap()
+        action(bitmap)
+    } else {
+        this.post {
+            if (this.width > 0 && this.height > 0) {
+                reAction()
+            }
+        }
     }
 }
 

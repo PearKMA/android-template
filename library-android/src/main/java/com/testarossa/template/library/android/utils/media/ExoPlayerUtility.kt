@@ -18,6 +18,7 @@ import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.google.android.exoplayer2.upstream.cache.CacheDataSource
 import com.google.android.exoplayer2.upstream.cache.SimpleCache
 import com.google.android.exoplayer2.util.Util
+import com.google.android.exoplayer2.video.VideoSize
 
 
 /**
@@ -65,19 +66,18 @@ exoUtility.changeStatePlayer(event.playing)
 class ExoPlayerUtility(
     private val playerView: StyledPlayerView?,
     private val context: Context,
-    private val runInBackground: Boolean = false,
-    delay: Long = 1000
+    private val runInBackground: Boolean = false
 ) : DefaultLifecycleObserver {
 
     // region Const and Fields
     interface IExoPlayerCallback {
-        fun getDurationMedia(duration: Long) {}
         fun onPlaybackPositionChanged(position: Long) {}
-        fun onLoading() {}
-        fun onLoadComplete() {}
+        fun onLoadComplete(duration: Long) {}
         fun onEndPlaying() {}
+        fun onLoading() {}
         fun onIsPlayingChanged(isPlaying: Boolean) {}
         fun onPlayerError(error: PlaybackException) {}
+        fun onMediaSizeChange(videoSize: VideoSize) {}
     }
 
     private val playbackStateListener: Player.Listener = playbackStateListener()
@@ -85,17 +85,16 @@ class ExoPlayerUtility(
     private val audioFocusUtility: AudioFocusUtility by lazy {
         AudioFocusUtility(context, audioFocusListener)
     }
-
     var listener: IExoPlayerCallback? = null
+    var repeat = false
+    var volume = 1f
+
     private var mediaItem: MediaItem? = null
     private var mediaSource: BaseMediaSource? = null
     private var player: ExoPlayer? = null
     private var playWhenReady = true
     private var startItemIndex = C.INDEX_UNSET
     private var playbackPosition = 0L
-    private var enableRepeat = false
-    private var volume = 1f
-    private var stopped = false
 
     private var handler: Handler = Handler(Looper.getMainLooper())
     private var mRunnable: Runnable = object : Runnable {
@@ -103,7 +102,7 @@ class ExoPlayerUtility(
             if (player != null) {
                 val current = player!!.currentPosition
                 listener?.onPlaybackPositionChanged(current)
-                handler.postDelayed(this, delay)
+                handler.postDelayed(this, 200L)
             }
         }
     }
@@ -117,38 +116,34 @@ class ExoPlayerUtility(
         player?.setPlaybackSpeed(speed)
     }
 
-    fun enableRepeat(enable: Boolean) {
-        enableRepeat = enable
-        player?.repeatMode = if (!enable) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ALL
-    }
-
     fun toggleRepeat() {
-        enableRepeat = !enableRepeat
-        player?.repeatMode = if (!enableRepeat) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ALL
+        repeat = !repeat
+        player?.repeatMode = if (!repeat) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ALL
     }
 
-    fun setMedia(media: MediaItem, simpleCache: SimpleCache? = null) {
-        mediaItem = media
-        player?.let {
-            if (simpleCache != null) {
-                mediaSource = ProgressiveMediaSource.Factory(
-                    CacheDataSource.Factory()
-                        .setCache(simpleCache)
-                        .setUpstreamDataSourceFactory(
-                            DefaultHttpDataSource.Factory()
-                                .setAllowCrossProtocolRedirects(true)
-                        )
-                        .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-                ).createMediaSource(media)
-                it.setMediaSource(mediaSource!!, true)
-            } else {
-                it.setMediaItem(mediaItem!!, true)
-            }
-            it.prepare()
+    fun setMedia(media: MediaItem, playNow: Boolean = true, simpleCache: SimpleCache? = null) {
+        if (simpleCache != null) {
+            mediaSource = ProgressiveMediaSource.Factory(
+                CacheDataSource.Factory()
+                    .setCache(simpleCache)
+                    .setUpstreamDataSourceFactory(
+                        DefaultHttpDataSource.Factory()
+                            .setAllowCrossProtocolRedirects(true)
+                    )
+                    .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+            ).createMediaSource(media)
+            player?.setMediaSource(mediaSource!!, true)
+        } else {
+            mediaItem = media
+            player?.setMediaItem(media, true)
         }
+        this.playWhenReady = playNow
+        player?.prepareSource()
     }
 
-    fun changeStatePlayer(playing: Boolean) {
+
+    fun changeStatePlaying(playing: Boolean) {
+        playWhenReady = playing
         if (playing) {
             audioFocusUtility.tryPlayback()
         } else {
@@ -159,7 +154,8 @@ class ExoPlayerUtility(
     /**
      * Play/Pause media
      */
-    fun onPlayPauseMedia() {
+    fun toggleStatePlaying() {
+        playWhenReady = !playWhenReady
         player?.let {
             if (!it.isPlaying) {
                 audioFocusUtility.tryPlayback()
@@ -177,7 +173,20 @@ class ExoPlayerUtility(
         player?.seekTo(playbackPosition)
     }
 
-    fun changeVolume(volume: Float) {
+    fun startSeekTo() {
+        playWhenReady = if (player?.playbackState == ExoPlayer.STATE_ENDED) {
+            false
+        } else {
+            player?.playWhenReady ?: playWhenReady
+        }
+        player?.playWhenReady = false
+    }
+
+    fun stopSeekTo() {
+        player?.playWhenReady = playWhenReady
+    }
+
+    fun changeVolume(@FloatRange(from = 0.0, to = 1.0) volume: Float) {
         this.volume = volume
         player?.volume = volume
     }
@@ -233,9 +242,8 @@ class ExoPlayerUtility(
                 playerView?.player = exoPlayer
                 exoPlayer.addListener(playbackStateListener)
                 exoPlayer.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
-                exoPlayer.playWhenReady = playWhenReady
                 exoPlayer.repeatMode =
-                    if (!enableRepeat) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ALL
+                    if (!repeat) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ALL
                 exoPlayer.volume = volume
                 val haveStartPosition = startItemIndex != C.INDEX_UNSET
                 if (haveStartPosition) {
@@ -253,10 +261,10 @@ class ExoPlayerUtility(
     }
 
     private fun ExoPlayer.prepareSource() {
+        prepare()
         if (playWhenReady) {
             audioFocusUtility.tryPlayback()
         }
-        prepare()
     }
 
 
@@ -269,19 +277,23 @@ class ExoPlayerUtility(
         player?.let { exoPlayer ->
             playbackPosition = exoPlayer.currentPosition
             startItemIndex = exoPlayer.currentMediaItemIndex
-            playWhenReady = exoPlayer.playWhenReady
+            playWhenReady = false//exoPlayer.playWhenReady
             exoPlayer.removeListener(playbackStateListener)
             exoPlayer.release()
         }
         player = null
+        listener?.onIsPlayingChanged(false)
     }
 
     private fun playbackStateListener() = object : Player.Listener {
+        override fun onVideoSizeChanged(videoSize: VideoSize) {
+            listener?.onMediaSizeChange(videoSize)
+        }
+
         override fun onPlaybackStateChanged(playbackState: Int) {
             when (playbackState) {
                 ExoPlayer.STATE_READY -> {
-                    listener?.getDurationMedia(player?.duration ?: 0L)
-                    listener?.onLoadComplete()
+                    listener?.onLoadComplete(player?.duration ?: 0L)
                 }
 
                 ExoPlayer.STATE_ENDED -> {
@@ -309,24 +321,22 @@ class ExoPlayerUtility(
 
     private fun audioFocusListener() = object : AudioFocusUtility.MediaControlListener {
         override fun onPlayMedia() {
-            if (stopped) {
-                stopped = false
+            if (player?.playbackState == ExoPlayer.STATE_IDLE) {
                 player?.prepare()
-            } else {
-                if (player?.playbackState == ExoPlayer.STATE_ENDED) {
-                    playbackPosition = 0L
-                    player?.seekTo(playbackPosition)
-                }
-                player?.playWhenReady = true
+            } else if (player?.playbackState == ExoPlayer.STATE_ENDED) {
+                playbackPosition = 0L
+                player?.seekTo(playbackPosition)
             }
+            playWhenReady = true
+            player?.playWhenReady = true
         }
 
         override fun onPauseMedia() {
+            playWhenReady = true
             player?.playWhenReady = false
         }
 
         override fun onStopMedia() {
-            stopped = true
             player?.stop()
         }
     }

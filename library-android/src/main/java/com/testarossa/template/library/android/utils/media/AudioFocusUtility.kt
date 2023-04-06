@@ -61,6 +61,7 @@ class AudioFocusUtility(context: Context, private val listener: MediaControlList
                         playbackDelayed = false
                         resumeOnFocusGain = false
                     }
+                    handler.removeCallbacks(delayedStopRunnable)
                     listener.onPlayMedia()
                 }
             }
@@ -75,6 +76,7 @@ class AudioFocusUtility(context: Context, private val listener: MediaControlList
     // region interactive
     fun tryPlayback() {
         if (isRequested) {
+            handler.removeCallbacks(delayedStopRunnable)
             listener.onPlayMedia()
             return
         }
@@ -97,6 +99,7 @@ class AudioFocusUtility(context: Context, private val listener: MediaControlList
                 playbackNowAuthorized = when (res) {
                     AudioManager.AUDIOFOCUS_REQUEST_FAILED -> false
                     AudioManager.AUDIOFOCUS_REQUEST_GRANTED -> {
+                        handler.removeCallbacks(delayedStopRunnable)
                         listener.onPlayMedia()
                         true
                     }
@@ -121,6 +124,7 @@ class AudioFocusUtility(context: Context, private val listener: MediaControlList
             )
 
             if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+                handler.removeCallbacks(delayedStopRunnable)
                 listener.onPlayMedia()
             }
         }

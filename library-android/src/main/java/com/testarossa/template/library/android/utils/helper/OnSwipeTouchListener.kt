@@ -4,17 +4,21 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
 import kotlin.math.PI
 import kotlin.math.atan2
 
 open class OnSwipeTouchListener(context: Context) : View.OnTouchListener {
     private val gestureDetector = GestureDetector(context, GestureListener())
+    private val multiGestureDetector = ScaleGestureDetector(context, ScaleGestureListener())
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(p0: View?, p1: MotionEvent?): Boolean {
         if (p1 != null) {
-            return gestureDetector.onTouchEvent(p1)
+            var retVal = gestureDetector.onTouchEvent(p1)
+            retVal = multiGestureDetector.onTouchEvent(p1) || retVal
+            return retVal
         }
         return false
     }
@@ -25,7 +29,7 @@ open class OnSwipeTouchListener(context: Context) : View.OnTouchListener {
     open fun onSwipeTopToBottom() {}
     open fun onSingleTap() {}
     open fun onLongPress() {}
-
+    open fun onScale(scale: Float) {}
     companion object {
         private const val SWIPE_THRESHOLD = 60
         private const val SWIPE_VELOCITY_THRESHOLD = 60
@@ -117,6 +121,17 @@ open class OnSwipeTouchListener(context: Context) : View.OnTouchListener {
         private fun getAngle(x1: Float, y1: Float, x2: Float, y2: Float): Double {
             val rad = atan2(y1 - y2, x2 - x1) + PI
             return (rad * 180 / PI + 180) % 360
+        }
+    }
+
+    private inner class ScaleGestureListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        private var mScaleFactor = 1f
+        override fun onScale(p0: ScaleGestureDetector): Boolean {
+            mScaleFactor *= p0.scaleFactor
+            mScaleFactor = if (mScaleFactor < 1f) 1f else mScaleFactor
+            val scale = (mScaleFactor - 1f).coerceIn(0f, 1f)
+            onScale(scale)
+            return true
         }
     }
 }

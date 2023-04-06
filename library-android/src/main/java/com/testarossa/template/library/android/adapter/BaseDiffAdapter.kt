@@ -71,10 +71,19 @@ class BaseListAdapter<T>(
     diffCallback: DiffUtil.ItemCallback<T>,
     inflater: LayoutInflater,
     @LayoutRes private val resLayout: Int
-
 ) : BaseDiffAdapter<T>(diffCallback, inflater) {
     override fun getItemViewType(position: Int): Int {
         return resLayout
     }
 }
 
+class ConditionAdapter<T>(
+    diffCallback: DiffUtil.ItemCallback<T>,
+    inflater: LayoutInflater,
+    private val condition: (T) -> Int
+
+) : BaseDiffAdapter<T>(diffCallback, inflater) {
+    override fun getItemViewType(position: Int): Int {
+        return condition(getItem(position))
+    }
+}

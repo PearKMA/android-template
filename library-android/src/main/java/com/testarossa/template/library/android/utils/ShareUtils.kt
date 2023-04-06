@@ -27,23 +27,9 @@ fun shareItem(context: Context?, file: File): Boolean {
         ShareCompat.IntentBuilder(context)
             .setType(getTypeFromFile(file.absolutePath) ?: "*/*")
             .addStream(fileUri)
+            .setSubject(file.name)
             .setChooserTitle("Share via")
             .startChooser()
-
-        // or use :
-//        val intentShareFile = Intent(Intent.ACTION_SEND)
-//        intentShareFile.type = getTypeFromFile(file.absolutePath) ?: "*/*"
-//        intentShareFile.putExtra(Intent.EXTRA_STREAM, fileUri)
-//        intentShareFile.flags =
-//            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-//
-//        val chooser = Intent.createChooser(intentShareFile, "Share via")
-//        val resInfoList = context.packageManager.queryIntentActivities(chooser, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
-//        resInfoList.forEach { info ->
-//            val packageName = info.activityInfo.packageName
-//            context.grantUriPermission(packageName, fileUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-//        }
-//        context.startActivity(chooser)
         true
     } else {
         false
@@ -63,19 +49,12 @@ fun shareMultiples(
     try {
         val shareIntent = ShareCompat.IntentBuilder(context)
             .setType(mimeType)
-        listUri.forEach { uri -> shareIntent.addStream(uri) }
+        listUri.forEach { uri ->
+            shareIntent.addStream(uri)
+        }
         val intent = shareIntent.intent
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         context.startActivity(Intent.createChooser(intent, "Share via"))
-        /* or use:
-        val intent = Intent().apply {
-            action = Intent.ACTION_SEND_MULTIPLE
-            putExtra(Intent.EXTRA_SUBJECT, "Here are some files.")
-            type = mimeType
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            putParcelableArrayListExtra(Intent.EXTRA_STREAM, listUri)
-        }
-        context.startActivity(intent)*/
     } catch (e: Exception) {
         e.printStackTrace()
     }
